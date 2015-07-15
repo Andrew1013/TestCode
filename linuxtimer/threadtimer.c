@@ -97,8 +97,10 @@ int main()
 	Inittime.tv_nsec = 0;
 	Rescheduletime.tv_sec = 0;
 	Rescheduletime.tv_nsec = 0;	
-	Tx_TimerCreate("Time1", Inittime, Rescheduletime, true, threadFunction1, cstr1);
+	pTimeHandle = Tx_TimerCreate("Time1", Inittime, Rescheduletime, false, threadFunction1, cstr1);
+	Tx_TimerActivate(pTimeHandle);
     sleep(3);
+    Tx_TimerDelete(pTimeHandle);  
     
     printf("------ Run Timer2 multi times ------ \n");
 	Inittime.tv_sec = 3;
