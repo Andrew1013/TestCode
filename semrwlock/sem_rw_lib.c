@@ -9,6 +9,7 @@
 #include <sys/sem.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/time.h>
 
 
 #define     COMMONLOCK_INIT        0
@@ -256,18 +257,32 @@ bool Sem_RdUnLock(int semid)
     return true;    
 }
 
+static int mstime_diff(struct timeval x , struct timeval y)
+{
+    double x_ms , y_ms , diff;
+     
+    x_ms = (double)x.tv_sec*1000000 + (double)x.tv_usec;
+    y_ms = (double)y.tv_sec*1000000 + (double)y.tv_usec;
+     
+    diff = (double)y_ms - (double)x_ms;     
+    return (int) diff/1000;
+}
+
+
 bool Sem_TimedWrLock(int semid, int msTimeout)
 {
-
     struct sembuf sem_b;    
     struct timespec ts;
     int ret = 0;
-  
+    struct timeval before , after;
+    int msectime = 0;
+    gettimeofday(&before , NULL);
+    
     /* Lock The Resource */
     sem_b.sem_num = SEM_WRLOCK;//SEM_WRLOCK;
     sem_b.sem_op = -1; 
     sem_b.sem_flg = SEM_UNDO;
-
+    
     //ret = semop(semid, &sem_b, 1);
     if(msTimeout == FOREVER)
     {
@@ -279,25 +294,37 @@ bool Sem_TimedWrLock(int semid, int msTimeout)
         ts.tv_nsec = ((msTimeout % 1000) * 1000000);        
         ret = semtimedop(semid, &sem_b , 1, &ts);
     }
-
-    if(ret >= 0)
+    
+    gettimeofday(&after , NULL);
+    msectime =  mstime_diff(before , after) ;
+    msTimeout -= msectime;
+        
+    if(ret >= 0 )
     {
-        while(RdLockCount(semid) != READ_LOCK_COUNT)
+        if(msTimeout > 0)
         {
-            msleep(10);
-            msTimeout -= 10;        
-            if(msTimeout <= 0)
+            while(RdLockCount(semid) != READ_LOCK_COUNT)
             {
-                Sem_WrUnLock(semid);
-                return false;
-            }    
+                msleep(10);
+                msTimeout -= 10;        
+                if(msTimeout <= 0)
+                {
+                    Sem_WrUnLock(semid);
+                    return false;
+                }    
+            }
+        }
+        else
+        {
+            Sem_WrUnLock(semid);
+            return false;
         }
     }
     else
+    {
         return false;        
-    
-    return true;    
-
+    }
+    return true;     
 }
 
 bool Sem_WrUnLock(int semid)
@@ -316,8 +343,8 @@ bool Sem_WrUnLock(int semid)
         return false;
     }
     return true;    
-
 }
+
 bool WrLockCheck(int semid)
 {    
     struct sembuf sem_b;
@@ -349,12 +376,11 @@ bool RdLockCheck(int semid)
     return false;
 }
 
-int RdLockCount(int semid)
+static int RdLockCount(int semid)
 {    
     union semun arg;            
     return semctl(semid,SEM_RDLOCK,GETVAL,arg);    
 }
-
 
 void Sem_PrintInfo(int semid)
 {

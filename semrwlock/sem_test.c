@@ -358,7 +358,7 @@ int main(int argc, char **argv)
     printf("\n\n--- Create three semaphore RdLock test and three semaphore WrLock test ---\n");
     Sem_RWLockTest();
     sleep(15);
-
+    
     //Sem_Remove(Sem_CommonInit("./test1234"));
     return 0;
 }

@@ -10,7 +10,7 @@
 
 
 #define sec(x)      (1000 * x)
-#define ms(x)       (x)
+#define msec(x)       (x)
 #define FOREVER     (0xFFFFFFFF)
 
 enum eumnSemType
@@ -28,19 +28,19 @@ union semun {                   /* Used in calls to semctl() */
 #endif
 };
 
-int Sem_RWLockInit(const char *pathname);
-bool Sem_TimedWrLock(int semid, int msTimeout);
-bool Sem_TimedRdLock(int semid, int msTimeout);
-bool Sem_WrUnLock(int semid);
-bool Sem_RdUnLock(int semid);
+int     Sem_RWLockInit(const char *pathname);
+bool    Sem_TimedWrLock(int semid, int msTimeout);
+bool    Sem_TimedRdLock(int semid, int msTimeout);
+bool    Sem_WrUnLock(int semid);
+bool    Sem_RdUnLock(int semid);
 
 
-int Sem_LockInit(const char *pathname);
-bool Sem_UnLock(int semid);
-bool Sem_TimedLock(int semid, int msTimeout);
+int     Sem_LockInit(const char *pathname);
+bool    Sem_UnLock(int semid);
+bool    Sem_TimedLock(int semid, int msTimeout);
 
 
-void Sem_Remove(int semid);
-void Sem_PrintInfo(int semid);
+void    Sem_Remove(int semid);
+void    Sem_PrintInfo(int semid);
 
 #endif
