@@ -22,18 +22,13 @@ static void timerFunction(union sigval sv)
 
 static void threadFunction3(void *arg) 
 {
-	struct timespec Inittime;
-	struct timespec Rescheduletime;	
-    
+   
 	sAAASTR  *pAaaStr= malloc(sizeof(sAAASTR)) ;
 	pAaaStr->a = 9999;
 	strcpy(pAaaStr->str, "threadFunction3"); 	
 	
-	Inittime.tv_sec = 5;
-	Inittime.tv_nsec = 0;
-	Rescheduletime.tv_sec = 0;
-	Rescheduletime.tv_nsec = 0;		
-	Tx_TimerHandle *time3 = Tx_TimerCreate("Time3", Inittime, Rescheduletime, true, timerFunction,  NULL);		
+	
+	Tx_TimerHandle *time3 = Tx_TimerCreate("Time3",  sec(5), 0, true, timerFunction,  NULL);		
 	Tx_TimerDelete(time3);
 	pthread_exit( (void *)pAaaStr );
 }
@@ -41,8 +36,6 @@ static void threadFunction3(void *arg)
 
 static void threadFunction4(void *arg) 
 {
-	struct timespec Inittime;
-	struct timespec Rescheduletime;	
     int i = 0;
     int iSec = 0;    
     int *retval = malloc(sizeof(int));
@@ -51,11 +44,7 @@ static void threadFunction4(void *arg)
     if(arg != NULL) 
         iSec = *((int*)arg);       
 
-	Inittime.tv_sec = 5;
-	Inittime.tv_nsec = 0;
-	Rescheduletime.tv_sec = 0;
-	Rescheduletime.tv_nsec = 0;		
-	Tx_TimerHandle *time3 = Tx_TimerCreate("Time4", Inittime, Rescheduletime, true, timerFunction,  NULL);		
+	Tx_TimerHandle *time3 = Tx_TimerCreate("Time4", sec(5), 0, true, timerFunction,  NULL);		
 	
 	for(i=0 ; i< iSec; i++)
 	{		
@@ -84,8 +73,6 @@ int main()
 {
 	char cstr1[100] = "Timer1";
 	char cstr2[100] = "Timer2";
-	struct timespec Inittime;
-	struct timespec Rescheduletime;
     Tx_TimerHandle *pTimeHandle;
     void *p_retval;
     pthread_t a_thread;
@@ -93,21 +80,13 @@ int main()
     int isec = 0;
    
     printf("------ Run Timer1 once ------ \n");
-	Inittime.tv_sec = 1;
-	Inittime.tv_nsec = 0;
-	Rescheduletime.tv_sec = 0;
-	Rescheduletime.tv_nsec = 0;	
-	pTimeHandle = Tx_TimerCreate("Time1", Inittime, Rescheduletime, false, threadFunction1, cstr1);
+	pTimeHandle = Tx_TimerCreate("Time1", sec(1), 0, false, threadFunction1, cstr1);
 	Tx_TimerActivate(pTimeHandle);
     sleep(3);
     Tx_TimerDelete(pTimeHandle);  
     
     printf("------ Run Timer2 multi times ------ \n");
-	Inittime.tv_sec = 3;
-	Inittime.tv_nsec = 0;
-	Rescheduletime.tv_sec = 3;
-	Rescheduletime.tv_nsec = 0;
-	pTimeHandle = Tx_TimerCreate("Time2", Inittime, Rescheduletime, true, threadFunction2, cstr2);
+	pTimeHandle = Tx_TimerCreate("Time2", sec(3), sec(3), true, threadFunction2, cstr2);
     sleep(15);
     Tx_TimerDelete(pTimeHandle);    
     sleep(5);

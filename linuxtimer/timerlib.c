@@ -22,12 +22,12 @@ bool  Tx_TimerActivate(Tx_TimerHandle *timer)
 }
 
 
-Tx_TimerHandle *Tx_TimerCreate(char *timeName, 
-												struct timespec stInitialtime, 												
-												struct timespec stRescheduletime,
-												bool   bAutoActivate,
-												TimerExpiryFunc   ExpiredFun,
-												void *arg)
+Tx_TimerHandle *Tx_TimerCreate(char *timeName, 												 
+									int msInitialTime,
+									int msRescheduleTime,												
+									bool   bAutoActivate,
+									TimerExpiryFunc   ExpiredFun,
+									void *arg)
 {   
     struct sigevent   event; 
     int res;
@@ -48,8 +48,13 @@ Tx_TimerHandle *Tx_TimerCreate(char *timeName,
     event.sigev_notify_attributes = NULL;
     newTimer->tpid = pthread_self();
     snprintf(newTimer->sztimer_name, sizeof(newTimer->sztimer_name), "%s",timeName );
-    memcpy(&newTimer->stInitialtime , &stInitialtime, sizeof(struct timespec));
-    memcpy(&newTimer->stRescheduletime , &stRescheduletime, sizeof(struct timespec));
+
+    
+    newTimer->stInitialtime.tv_sec = (msInitialTime / 1000);
+    newTimer->stInitialtime.tv_nsec = ((msInitialTime % 1000) * 1000000);       
+
+    newTimer->stRescheduletime.tv_sec = (msRescheduleTime / 1000);
+    newTimer->stRescheduletime.tv_nsec = ((msRescheduleTime % 1000) * 1000000);    
     
     res = timer_create(CLOCK_MONOTONIC, &event, &(newTimer->timerid)); 
     if(res != 0)

@@ -10,6 +10,10 @@
 #include <string.h>
 #include <stdbool.h>
 
+
+#define sec(x)      (1000 * x)
+#define msec(x)       (x)
+
 typedef  void(*TimerExpiryFunc)(union sigval);
 
 typedef struct _TX_TIMER_STRUCT {
@@ -23,12 +27,14 @@ typedef struct _TX_TIMER_STRUCT {
 
 bool Tx_TimerDelete(Tx_TimerHandle *timer);
 bool Tx_TimerActivate(Tx_TimerHandle *timer);
-Tx_TimerHandle *Tx_TimerCreate(char *timeName, 
-								struct timespec stInitialtime, 												
-								struct timespec stRescheduletime,
-								bool   bAutoActivate,
-								TimerExpiryFunc   ExpiredFun,
-								void *arg);
+Tx_TimerHandle *Tx_TimerCreate(char *timeName, 												 
+									int msInitialTime,
+									int msRescheduleTime,												
+									bool   bAutoActivate,
+									TimerExpiryFunc   ExpiredFun,
+									void *arg);
+
+
 
 
 
