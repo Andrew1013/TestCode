@@ -359,7 +359,6 @@ int main(int argc, char **argv)
     Sem_RWLockTest();
     sleep(15);
     
-    //Sem_Remove(Sem_CommonInit("./test1234"));
     return 0;
 }
 

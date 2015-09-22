@@ -12,12 +12,20 @@
 #include <sys/time.h>
 
 
-#define     COMMONLOCK_INIT        0
-#define     RWLOCK_INIT            1  
-#define     READ_LOCK_COUNT        10  
-#define     WRITE_LOCK_COUNT       1  
+#define     COMMONLOCK_INIT         0
+#define     RWLOCK_INIT             1  
+#define     READ_LOCK_COUNT         10  
+#define     WRITE_LOCK_COUNT        1  
+#define     msleep(d)               usleep(1000 * d)
 
-#define     msleep(d) usleep(1000 * d)
+union semun {                   /* Used in calls to semctl() */
+    int                 val;
+    struct semid_ds     *buf;
+    unsigned short      *array;
+#if defined(__linux__)
+    struct seminfo      *__buf;
+#endif
+};
 
 int  semtimedop(int  semid, struct sembuf *sops, unsigned nsops, struct timespec *timeout);
 static int RdLockCount(int semid);
@@ -158,7 +166,7 @@ static int _Sem_Init(const char *pathname, int type)
 
 }
 
-bool Sem_TimedLock(int semid,  int msTimeout)
+bool Sem_TimedLock(int semid, unsigned int msTimeout)
 {
     struct sembuf sem_b;
     struct timespec ts;
@@ -201,7 +209,7 @@ bool Sem_UnLock(int semid)
     return true;
 }
 
-bool Sem_TimedRdLock(int semid, int msTimeout)
+bool Sem_TimedRdLock(int semid,unsigned int msTimeout)
 {
     struct sembuf sem_b;    
     struct timespec ts;
@@ -269,12 +277,13 @@ static int mstime_diff(struct timeval x , struct timeval y)
 }
 
 
-bool Sem_TimedWrLock(int semid, int msTimeout)
+bool Sem_TimedWrLock(int semid,unsigned int msTimeout)
 {
     struct sembuf sem_b;    
     struct timespec ts;
     int ret = 0;
     struct timeval before , after;
+    int msec_difftime = 0;
     int msectime = 0;
     gettimeofday(&before , NULL);
     
@@ -296,18 +305,18 @@ bool Sem_TimedWrLock(int semid, int msTimeout)
     }
     
     gettimeofday(&after , NULL);
-    msectime =  mstime_diff(before , after) ;
-    msTimeout -= msectime;
+    msec_difftime =  mstime_diff(before , after) ;
+    msectime = msTimeout - msec_difftime ;
         
     if(ret >= 0 )
     {
-        if(msTimeout > 0)
+        if(msectime > 0)
         {
             while(RdLockCount(semid) != READ_LOCK_COUNT)
             {
                 msleep(10);
-                msTimeout -= 10;        
-                if(msTimeout <= 0)
+                msectime -= 10;        
+                if(msectime <= 0)
                 {
                     Sem_WrUnLock(semid);
                     return false;

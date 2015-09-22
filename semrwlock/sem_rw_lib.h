@@ -10,34 +10,28 @@
 
 
 #define sec(x)      (1000 * x)
-#define msec(x)       (x)
+#define msec(x)     (x)
 #define FOREVER     (0xFFFFFFFF)
 
 enum eumnSemType
 {
-    SEM_WRLOCK =0,
-    SEM_RDLOCK= 1
-};
-
-union semun {                   /* Used in calls to semctl() */
-    int                 val;
-    struct semid_ds     *buf;
-    unsigned short      *array;
-#if defined(__linux__)
-    struct seminfo      *__buf;
-#endif
+    SEM_WRLOCK  =0,
+    SEM_RDLOCK  =1
 };
 
 int     Sem_RWLockInit(const char *pathname);
-bool    Sem_TimedWrLock(int semid, int msTimeout);
-bool    Sem_TimedRdLock(int semid, int msTimeout);
+/*pair for write lock and unlock for only one process to access.*/
+bool    Sem_TimedWrLock(int semid, unsigned int msTimeout);
 bool    Sem_WrUnLock(int semid);
+/*pair for read lock and unlock, these are 10 of the most process to access.*/
+bool    Sem_TimedRdLock(int semid, unsigned int msTimeout);
 bool    Sem_RdUnLock(int semid);
 
 
 int     Sem_LockInit(const char *pathname);
+/*pair for lock and unlock*/
+bool    Sem_TimedLock(int semid, unsigned int msTimeout);
 bool    Sem_UnLock(int semid);
-bool    Sem_TimedLock(int semid, int msTimeout);
 
 
 void    Sem_Remove(int semid);
