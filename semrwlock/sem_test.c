@@ -5,12 +5,17 @@
 #include <signal.h>
 #include "sem_rw_lib.h"
 
+
+#define COMMON_LOCK_PATH    "./test10000"
+#define RWLOCK_PATH         "./test28000"
+
+
 void CommonTest1(void* argInfo)
 {
     int sem_key = -1;
     bool ret = false;
 
-    sem_key =Sem_LockInit("./test123456");    
+    sem_key =Sem_LockInit(COMMON_LOCK_PATH);    
     Sem_PrintInfo(sem_key);
     printf("[%s:%d] sem key:%d\n",__FUNCTION__, __LINE__,sem_key);    
     if(sem_key >= 0)
@@ -18,7 +23,7 @@ void CommonTest1(void* argInfo)
         printf("[%s:%d] Try Lock Time:FOREVER\n",__FUNCTION__, __LINE__);
         if( Sem_TimedLock(sem_key, FOREVER))
         {
-            printf("[%s:%d] Get Lock, sleep:20\n",__FUNCTION__, __LINE__);            
+            printf("[%s:%d] Get Lock, sleep:20s\n",__FUNCTION__, __LINE__);            
             sleep(20);              
             ret = Sem_UnLock(sem_key);            
             printf("[%s:%d]  UnLock, ret:%d\n",__FUNCTION__, __LINE__, ret);
@@ -35,15 +40,15 @@ void CommonTest2(void* argInfo)
 {
     int sem_key = -1;
     bool ret = false;
-    sem_key =Sem_LockInit("./test123456");   
+    sem_key =Sem_LockInit(COMMON_LOCK_PATH);   
     //Sem_PrintInfo(sem_key);
     printf("[%s:%d] sem key:%d\n",__FUNCTION__, __LINE__,sem_key);    
     if(sem_key >= 0)
     {   
-        printf("[%s:%d] Try Lock Time:10\n",__FUNCTION__, __LINE__);        
-        if( Sem_TimedLock(sem_key, sec(10)))
+        printf("[%s:%d] Try Lock Time:3s\n",__FUNCTION__, __LINE__);        
+        if( Sem_TimedLock(sem_key, sec(3)))
         {            
-            printf("[%s:%d] Get Lock, sleep:10\n",__FUNCTION__, __LINE__);
+            printf("[%s:%d] Get Lock, sleep:10s\n",__FUNCTION__, __LINE__);
             sleep(10);            
             ret = Sem_UnLock(sem_key);            
             printf("[%s:%d] UnLock, ret:%d\n",__FUNCTION__, __LINE__, ret);
@@ -99,17 +104,17 @@ void RlockTest1(void* argInfo)
 {
     int sem_key = -1;
     bool ret = false;
-    sem_key =Sem_RWLockInit("./test1100");   
+    sem_key =Sem_RWLockInit(RWLOCK_PATH);   
     Sem_PrintInfo(sem_key);
     sleep(1);
     
     printf("[%s:%d] sem key:%d\n",__FUNCTION__, __LINE__,sem_key);    
     if(sem_key >= 0)
     {   
-        printf("[%s:%d] Try Lock Time:3\n",__FUNCTION__, __LINE__);        
+        printf("[%s:%d] Try Lock Time:3s\n",__FUNCTION__, __LINE__);        
         if( Sem_TimedRdLock(sem_key, sec(3)))
         {            
-            printf("[%s:%d] Get Lock, sleep:2\n",__FUNCTION__, __LINE__);
+            printf("[%s:%d] Get Lock, sleep:2s\n",__FUNCTION__, __LINE__);
             sleep(2);            
             ret = Sem_RdUnLock(sem_key);            
             printf("[%s:%d] UnLock, ret:%d\n",__FUNCTION__, __LINE__, ret);
@@ -125,16 +130,17 @@ void RlockTest2(void* argInfo)
 {
     int sem_key = -1;
     bool ret = false;
-    sem_key =Sem_RWLockInit("./test1100");   
+    sem_key =Sem_RWLockInit(RWLOCK_PATH);  
+    //Sem_PrintInfo(sem_key);
     sleep(1);
     
     printf("[%s:%d] sem key:%d\n",__FUNCTION__, __LINE__,sem_key);    
     if(sem_key >= 0)
     {   
-        printf("[%s:%d] Try Lock Time:3\n",__FUNCTION__, __LINE__);        
+        printf("[%s:%d] Try Lock Time:3s\n",__FUNCTION__, __LINE__);        
         if( Sem_TimedRdLock(sem_key, sec(3)))
         {            
-            printf("[%s:%d] Get Lock, sleep:2\n",__FUNCTION__, __LINE__);
+            printf("[%s:%d] Get Lock, sleep:2s\n",__FUNCTION__, __LINE__);
             sleep(2);            
             ret = Sem_RdUnLock(sem_key);            
             printf("[%s:%d] UnLock, ret:%d\n",__FUNCTION__, __LINE__, ret);
@@ -150,16 +156,17 @@ void RlockTest3(void* argInfo)
 {
     int sem_key = -1;
     bool ret = false;
-    sem_key =Sem_RWLockInit("./test1100");    
+    sem_key =Sem_RWLockInit(RWLOCK_PATH);    
+    //Sem_PrintInfo(sem_key);
     sleep(3);
     
     printf("[%s:%d] sem key:%d\n",__FUNCTION__, __LINE__,sem_key);    
     if(sem_key >= 0)
     {   
-        printf("[%s:%d] Try Lock Time:3\n",__FUNCTION__, __LINE__);        
+        printf("[%s:%d] Try Lock Time:3s\n",__FUNCTION__, __LINE__);        
         if( Sem_TimedRdLock(sem_key, sec(3)))
         {            
-            printf("[%s:%d] Get Lock, sleep:1\n",__FUNCTION__, __LINE__);
+            printf("[%s:%d] Get Lock, sleep:1s\n",__FUNCTION__, __LINE__);
             sleep(1);            
             ret = Sem_RdUnLock(sem_key);            
             printf("[%s:%d] UnLock, ret:%d\n",__FUNCTION__, __LINE__, ret);
@@ -176,16 +183,17 @@ void WlockTest1(void* argInfo)
 {
     int sem_key = -1;
     bool ret = false;
-    sem_key =Sem_RWLockInit("./test1100");   
+    sem_key =Sem_RWLockInit(RWLOCK_PATH);  
+    //Sem_PrintInfo(sem_key);
     sleep(2);
     
     printf("[%s:%d] sem key:%d\n",__FUNCTION__, __LINE__,sem_key);    
     if(sem_key >= 0)
     {   
-        printf("[%s:%d] Try Lock Time:3\n",__FUNCTION__, __LINE__);        
+        printf("[%s:%d] Try Lock Time:3s\n",__FUNCTION__, __LINE__);        
         if( Sem_TimedWrLock(sem_key, sec(3)))
         {            
-            printf("[%s:%d] Get Lock, sleep:2\n",__FUNCTION__, __LINE__);
+            printf("[%s:%d] Get Lock, sleep:2s\n",__FUNCTION__, __LINE__);
             sleep(2);       
             ret = Sem_WrUnLock(sem_key);            
             printf("[%s:%d] UnLock, ret:%d\n",__FUNCTION__, __LINE__, ret);
@@ -202,16 +210,17 @@ void WlockTest2(void* argInfo)
 {
     int sem_key = -1;
     bool ret = false;
-    sem_key =Sem_RWLockInit("./test1100");   
+    sem_key =Sem_RWLockInit(RWLOCK_PATH);   
+    //Sem_PrintInfo(sem_key);
     sleep(3);
     
     printf("[%s:%d] sem key:%d\n",__FUNCTION__, __LINE__,sem_key);    
     if(sem_key >= 0)
     {   
-        printf("[%s:%d] Try Lock Time:3\n",__FUNCTION__, __LINE__);        
+        printf("[%s:%d] Try Lock Time:3s\n",__FUNCTION__, __LINE__);        
         if( Sem_TimedWrLock(sem_key, sec(3)))
         {            
-            printf("[%s:%d] Get Lock, sleep:1\n",__FUNCTION__, __LINE__);
+            printf("[%s:%d] Get Lock, sleep:1s\n",__FUNCTION__, __LINE__);
             sleep(1);            
             ret = Sem_WrUnLock(sem_key);            
             printf("[%s:%d] UnLock, ret:%d\n",__FUNCTION__, __LINE__, ret);
@@ -227,16 +236,17 @@ void WlockTest3(void* argInfo)
 {
     int sem_key = -1;
     bool ret = false;
-    sem_key =Sem_RWLockInit("./test1100");   
+    sem_key =Sem_RWLockInit(RWLOCK_PATH);  
+    //Sem_PrintInfo(sem_key);
     sleep(4);
     
     printf("[%s:%d] sem key:%d\n",__FUNCTION__, __LINE__,sem_key);    
     if(sem_key >= 0)
     {   
-        printf("[%s:%d] Try Lock Time:3\n",__FUNCTION__, __LINE__);        
+        printf("[%s:%d] Try Lock Time:3s\n",__FUNCTION__, __LINE__);        
         if( Sem_TimedWrLock(sem_key, sec(3)))
         {            
-            printf("[%s:%d] Get Lock, sleep:1\n",__FUNCTION__, __LINE__);
+            printf("[%s:%d] Get Lock, sleep:1s\n",__FUNCTION__, __LINE__);
             sleep(1);            
             ret = Sem_WrUnLock(sem_key);            
             printf("[%s:%d] UnLock, ret:%d\n",__FUNCTION__, __LINE__, ret);
@@ -353,7 +363,7 @@ int main(int argc, char **argv)
 {
     printf("--- Create two threads for semaphore test ---\n");
     Sem_CommonTest();
-    sleep(30);
+    sleep(40);
 
     printf("\n\n--- Create three semaphore RdLock test and three semaphore WrLock test ---\n");
     Sem_RWLockTest();

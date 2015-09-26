@@ -13,11 +13,6 @@
 #define msec(x)     (x)
 #define FOREVER     (0xFFFFFFFF)
 
-enum eumnSemType
-{
-    SEM_WRLOCK  =0,
-    SEM_RDLOCK  =1
-};
 
 int     Sem_RWLockInit(const char *pathname);
 /*pair for write lock and unlock for only one process to access.*/

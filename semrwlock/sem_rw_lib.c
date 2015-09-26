@@ -12,11 +12,10 @@
 #include <sys/time.h>
 
 
-#define     COMMONLOCK_INIT         0
-#define     RWLOCK_INIT             1  
-#define     READ_LOCK_COUNT         10  
-#define     WRITE_LOCK_COUNT        1  
-#define     msleep(d)               usleep(1000 * d)
+#define READ_LOCK_COUNT         10  
+#define WRITE_LOCK_COUNT        1  
+#define msleep(d)               usleep(1000 * d)
+#define RD_LOW_TIME             msec(100)
 
 union semun {                   /* Used in calls to semctl() */
     int                 val;
@@ -26,6 +25,20 @@ union semun {                   /* Used in calls to semctl() */
     struct seminfo      *__buf;
 #endif
 };
+
+enum eumnSemType
+{
+    SEM_WRLOCK  = 0,
+    SEM_RDLOCK  = 1,
+    SEM_WRLOCK_LOW_PRI  = 2
+};
+
+enum eumnSemInitType
+{
+    COMMONLOCK_INIT  = 0,
+    RWLOCK_INIT  = 1
+};
+
 
 int  semtimedop(int  semid, struct sembuf *sops, unsigned nsops, struct timespec *timeout);
 static int RdLockCount(int semid);
@@ -73,12 +86,12 @@ static int _Sem_Init(const char *pathname, int type)
     if(type == COMMONLOCK_INIT)
         semid = semget(key, 1, IPC_CREAT | IPC_EXCL | 0666 );   
     else
-        semid = semget(key, 2, IPC_CREAT | IPC_EXCL | 0666 );  
+        semid = semget(key, 3, IPC_CREAT | IPC_EXCL | 0666 );  
     
     if (semid != -1) 
     {   /* Successfully created the semaphore */
         union semun arg;
-        struct sembuf sop[2];
+        struct sembuf sop[3];
         arg.val = 0;                    /* So initialize it to 0 */
         
         if(type == COMMONLOCK_INIT)
@@ -110,12 +123,21 @@ static int _Sem_Init(const char *pathname, int type)
                 return -1;
             } 
 
+            if (semctl(semid, SEM_WRLOCK_LOW_PRI, SETVAL, arg) == -1)
+            {
+                syslog(LOG_WARNING ,"%s semctl for SEM_RD_LOW_PRI failed\n", __FUNCTION__);
+                return -1;
+            } 
+
             sop[SEM_WRLOCK].sem_num = 0;                /* Operate on semaphore 0 */
             sop[SEM_WRLOCK].sem_op = WRITE_LOCK_COUNT;                 //for write
             sop[SEM_WRLOCK].sem_flg = 0;
             sop[SEM_RDLOCK].sem_num = 1;                /* Operate on semaphore 1 */
             sop[SEM_RDLOCK].sem_op = READ_LOCK_COUNT;                 /* Wait for value to equal 0 */
-            sop[SEM_RDLOCK].sem_flg = 0;         
+            sop[SEM_RDLOCK].sem_flg = 0;    
+            sop[SEM_WRLOCK_LOW_PRI].sem_num = 2;                /* Operate on semaphore 1 */
+            sop[SEM_WRLOCK_LOW_PRI].sem_op = 0;                 /* Wait for value to equal 0 */
+            sop[SEM_WRLOCK_LOW_PRI].sem_flg = 0;                     
             if (semop(semid, sop, 2) == -1)
             {
                 syslog(LOG_WARNING ,"%s semop failed\n", __FUNCTION__);
@@ -215,7 +237,7 @@ bool Sem_TimedRdLock(int semid,unsigned int msTimeout)
     struct timespec ts;
     int ret = 0;
 
-    while(!WrLockCheck(semid))
+    while(WrLockCheck(semid))
     {
         msleep(10);
         msTimeout -= 10;        
@@ -276,8 +298,22 @@ static int mstime_diff(struct timeval x , struct timeval y)
     return (int) diff/1000;
 }
 
+static void Sem_WrLockLowPri(int semid,unsigned int msTimeout)
+{
+        struct sembuf sem_b;    
+        struct timespec ts;
+        
+        sem_b.sem_num = SEM_WRLOCK_LOW_PRI;
+        sem_b.sem_op = -1; 
+        sem_b.sem_flg = SEM_UNDO;
 
-bool Sem_TimedWrLock(int semid,unsigned int msTimeout)
+        ts.tv_sec = (msTimeout / 1000);
+        ts.tv_nsec = ((msTimeout % 1000) * 1000000);        
+        semtimedop(semid, &sem_b , 1, &ts);        
+}
+
+
+bool Sem_TimedWrLock(int semid, unsigned int msTimeout)
 {
     struct sembuf sem_b;    
     struct timespec ts;
@@ -285,8 +321,14 @@ bool Sem_TimedWrLock(int semid,unsigned int msTimeout)
     struct timeval before , after;
     int msec_difftime = 0;
     int msectime = 0;
-    gettimeofday(&before , NULL);
+
+    if(WrLockCheck(semid) && msTimeout > RD_LOW_TIME)
+    {        
+        msTimeout -= RD_LOW_TIME;
+        Sem_WrLockLowPri(semid, RD_LOW_TIME);         
+    }  
     
+    gettimeofday(&before , NULL);    
     /* Lock The Resource */
     sem_b.sem_num = SEM_WRLOCK;//SEM_WRLOCK;
     sem_b.sem_op = -1; 
@@ -364,9 +406,9 @@ bool WrLockCheck(int semid)
 
     if(semop(semid,&sem_b,1) == -1)
     {
-        return true;
+        return false;
     }
-    return false;
+    return true;
 
 }
 
@@ -380,9 +422,9 @@ bool RdLockCheck(int semid)
 
     if(semop(semid,&sem_b,1) == -1)
     {
-        return true;
+        return false;
     }
-    return false;
+    return true;
 }
 
 static int RdLockCount(int semid)
