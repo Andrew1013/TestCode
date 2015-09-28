@@ -66,6 +66,20 @@ static key_t jenkins_key(const char *pathname)
     return hash;
 }
 
+static void Sem_WrLockWait(int semid,unsigned int msTimeout)
+{
+        struct sembuf sem_b;    
+        struct timespec ts;
+        
+        sem_b.sem_num = SEM_WRLOCK_LOW_PRI;
+        sem_b.sem_op = -1; 
+        sem_b.sem_flg = SEM_UNDO;
+
+        ts.tv_sec = (msTimeout / 1000);
+        ts.tv_nsec = ((msTimeout % 1000) * 1000000);        
+        semtimedop(semid, &sem_b , 1, &ts);        
+}
+
 void Sem_Remove(int semid)
 {
     union semun dummy;
@@ -234,16 +248,17 @@ bool Sem_UnLock(int semid)
     return true;
 }
 
-bool Sem_TimedRdLock(int semid,unsigned int msTimeout)
+bool Sem_TimedRdLock(int semid,unsigned int u32msTimeout)
 {
     struct sembuf sem_b;    
     struct timespec ts;
     int ret = 0;
+    long long msTimeout = u32msTimeout;
 
     while(WrLockCheck(semid))
     {
-        msleep(10);
-        msTimeout -= 10;        
+        Sem_WrLockWait(semid, msec(10)); 
+        msTimeout -=  msec(10);          
         if(msTimeout <= 0)
             return false;
     }
@@ -301,21 +316,6 @@ static int mstime_diff(struct timeval x , struct timeval y)
     return (int) diff/1000;
 }
 
-static void Sem_WrLockWait(int semid,unsigned int msTimeout)
-{
-        struct sembuf sem_b;    
-        struct timespec ts;
-        
-        sem_b.sem_num = SEM_WRLOCK_LOW_PRI;
-        sem_b.sem_op = -1; 
-        sem_b.sem_flg = SEM_UNDO;
-
-        ts.tv_sec = (msTimeout / 1000);
-        ts.tv_nsec = ((msTimeout % 1000) * 1000000);        
-        semtimedop(semid, &sem_b , 1, &ts);        
-}
-
-
 static int Sem_WrProcessCount(int semid)
 {
     union semun dummy;
@@ -331,7 +331,7 @@ bool Sem_TimedWrLock(int semid, unsigned int u32msTimeout)
     struct timeval before , after;
     long long msTimeout = u32msTimeout;
     
-    if(WrLockCheck(semid))
+    if(WrLockCheck(semid) || Sem_WrProcessCount(semid) > 0)
     {         
         if((msTimeout > WR_WAIT_TIME1) && Sem_WrProcessCount(semid) == 0)
         {
@@ -345,7 +345,7 @@ bool Sem_TimedWrLock(int semid, unsigned int u32msTimeout)
         }
         else if((msTimeout > WR_WAIT_TIME3) && Sem_WrProcessCount(semid) >= 3)
         {            
-            while(Sem_WrProcessCount(semid) != 0)
+            while(Sem_WrProcessCount(semid) != 0 || WrLockCheck(semid))
             {
                 Sem_WrLockWait(semid, WR_WAIT_TIME3); 
                 msTimeout -= WR_WAIT_TIME3;        
