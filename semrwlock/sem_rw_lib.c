@@ -323,17 +323,16 @@ static int Sem_WrProcessCount(int semid)
 }
 
 
-bool Sem_TimedWrLock(int semid, unsigned int msTimeout)
+bool Sem_TimedWrLock(int semid, unsigned int u32msTimeout)
 {
     struct sembuf sem_b;    
     struct timespec ts;
     int ret = 0;
     struct timeval before , after;
-    int msec_difftime = 0;
-    int msectime = 0;
-
+    long long msTimeout = u32msTimeout;
+    
     if(WrLockCheck(semid))
-    {  
+    {         
         if((msTimeout > WR_WAIT_TIME1) && Sem_WrProcessCount(semid) == 0)
         {
             msTimeout -= WR_WAIT_TIME1;
@@ -349,8 +348,8 @@ bool Sem_TimedWrLock(int semid, unsigned int msTimeout)
             while(Sem_WrProcessCount(semid) != 0)
             {
                 Sem_WrLockWait(semid, WR_WAIT_TIME3); 
-                msectime -= WR_WAIT_TIME3;        
-                if(msectime <= 0)
+                msTimeout -= WR_WAIT_TIME3;        
+                if(msTimeout <= 0)
                 {                    
                     return false;
                 }    
@@ -381,18 +380,17 @@ bool Sem_TimedWrLock(int semid, unsigned int msTimeout)
     }    
      
     gettimeofday(&after , NULL);
-    msec_difftime =  mstime_diff(before , after) ;
-    msectime = msTimeout - msec_difftime ;
+    msTimeout -= mstime_diff(before , after) ;    
         
     if(ret >= 0 )
     {
-        if(msectime > 0)
+        if(msTimeout > 0)
         {
             while(RdLockCount(semid) != READ_LOCK_COUNT)
             {                
                 Sem_WrLockWait(semid, msec(10)); 
-                msectime -= 10;        
-                if(msectime <= 0)
+                msTimeout -=  msec(10);        
+                if(msTimeout <= 0)
                 {
                     Sem_WrUnLock(semid);
                     return false;
