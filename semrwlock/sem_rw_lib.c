@@ -15,7 +15,10 @@
 #define READ_LOCK_COUNT         10  
 #define WRITE_LOCK_COUNT        1  
 #define msleep(d)               usleep(1000 * d)
-#define RD_LOW_TIME             msec(100)
+#define WR_WAIT_TIME1           msec(250)
+#define WR_WAIT_TIME2           msec(500)
+#define WR_WAIT_TIME3           sec(1)
+
 
 union semun {                   /* Used in calls to semctl() */
     int                 val;
@@ -298,7 +301,7 @@ static int mstime_diff(struct timeval x , struct timeval y)
     return (int) diff/1000;
 }
 
-static void Sem_WrLockLowPri(int semid,unsigned int msTimeout)
+static void Sem_WrLockWait(int semid,unsigned int msTimeout)
 {
         struct sembuf sem_b;    
         struct timespec ts;
@@ -313,6 +316,13 @@ static void Sem_WrLockLowPri(int semid,unsigned int msTimeout)
 }
 
 
+static int Sem_WrProcessCount(int semid)
+{
+    union semun dummy;
+    return semctl(semid, SEM_WRLOCK, GETNCNT, dummy);     
+}
+
+
 bool Sem_TimedWrLock(int semid, unsigned int msTimeout)
 {
     struct sembuf sem_b;    
@@ -322,12 +332,36 @@ bool Sem_TimedWrLock(int semid, unsigned int msTimeout)
     int msec_difftime = 0;
     int msectime = 0;
 
-    if(WrLockCheck(semid) && msTimeout > RD_LOW_TIME)
-    {        
-        msTimeout -= RD_LOW_TIME;
-        Sem_WrLockLowPri(semid, RD_LOW_TIME);         
-    }  
-    
+    if(WrLockCheck(semid))
+    {  
+        if((msTimeout > WR_WAIT_TIME1) && Sem_WrProcessCount(semid) == 0)
+        {
+            msTimeout -= WR_WAIT_TIME1;
+            Sem_WrLockWait(semid, WR_WAIT_TIME1);             
+        }
+        else if((msTimeout > WR_WAIT_TIME2) && Sem_WrProcessCount(semid) < 3)
+        {
+            msTimeout -= WR_WAIT_TIME2;
+            Sem_WrLockWait(semid, WR_WAIT_TIME2);             
+        }
+        else if((msTimeout > WR_WAIT_TIME3) && Sem_WrProcessCount(semid) >= 3)
+        {            
+            while(Sem_WrProcessCount(semid) != 0)
+            {
+                Sem_WrLockWait(semid, WR_WAIT_TIME3); 
+                msectime -= WR_WAIT_TIME3;        
+                if(msectime <= 0)
+                {                    
+                    return false;
+                }    
+            }
+        }
+        else
+        {
+            return false;
+        }
+    }
+     
     gettimeofday(&before , NULL);    
     /* Lock The Resource */
     sem_b.sem_num = SEM_WRLOCK;//SEM_WRLOCK;
@@ -344,8 +378,8 @@ bool Sem_TimedWrLock(int semid, unsigned int msTimeout)
         ts.tv_sec = (msTimeout / 1000);
         ts.tv_nsec = ((msTimeout % 1000) * 1000000);        
         ret = semtimedop(semid, &sem_b , 1, &ts);
-    }
-    
+    }    
+     
     gettimeofday(&after , NULL);
     msec_difftime =  mstime_diff(before , after) ;
     msectime = msTimeout - msec_difftime ;
@@ -355,8 +389,8 @@ bool Sem_TimedWrLock(int semid, unsigned int msTimeout)
         if(msectime > 0)
         {
             while(RdLockCount(semid) != READ_LOCK_COUNT)
-            {
-                msleep(10);
+            {                
+                Sem_WrLockWait(semid, msec(10)); 
                 msectime -= 10;        
                 if(msectime <= 0)
                 {
