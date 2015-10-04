@@ -48,6 +48,8 @@ static int RdLockCount(int semid);
 static bool WrLockCheck(int semid);
 static int _Sem_Init(const char *pathname, int type);
 bool RdLockCheck(int semid);
+static void Sem_DebugInfo(int semid, const char *szFunName);
+
 
 
 static key_t jenkins_key(const char *pathname)
@@ -200,7 +202,7 @@ static int _Sem_Init(const char *pathname, int type)
             }            
         }
     }
-    syslog(LOG_INFO ,"%s  semaphore initialized, semid:%d, key:%x\n\n", __FUNCTION__,semid, key);
+    syslog(LOG_INFO ,"%s  semaphore initialized, semid:%d, key:%x, path:%s\n\n", __FUNCTION__,semid, key, pathname);
     return semid;
 
 }
@@ -229,6 +231,7 @@ bool Sem_TimedLock(int semid, unsigned int msTimeout)
      
     if(ret < 0)
     {
+        Sem_DebugInfo(semid, __FUNCTION__);
         return false;
     }
     return true;
@@ -243,6 +246,7 @@ bool Sem_UnLock(int semid)
     sem_b.sem_flg = SEM_UNDO /* | IPC_NOWAIT */;
     if(semop(semid, &sem_b, 1) == -1) 
     {
+        Sem_DebugInfo(semid, __FUNCTION__);
         return false;
     }
     return true;
@@ -260,7 +264,10 @@ bool Sem_TimedRdLock(int semid,unsigned int u32msTimeout)
         Sem_WrLockWait(semid, msec(10)); 
         msTimeout -=  msec(10);          
         if(msTimeout <= 0)
+        {
+            Sem_DebugInfo(semid, __FUNCTION__);
             return false;
+        }    
     }
     
     /* Lock The Resource */
@@ -282,6 +289,7 @@ bool Sem_TimedRdLock(int semid,unsigned int u32msTimeout)
     
     if(ret < 0)
     {
+        Sem_DebugInfo(semid, __FUNCTION__);
         return false;
     }
     return true;    
@@ -351,6 +359,7 @@ bool Sem_TimedWrLock(int semid, unsigned int u32msTimeout)
                 msTimeout -= WR_WAIT_TIME3;        
                 if(msTimeout <= 0)
                 {                    
+                    Sem_DebugInfo(semid, __FUNCTION__);
                     return false;
                 }    
             }
@@ -392,6 +401,7 @@ bool Sem_TimedWrLock(int semid, unsigned int u32msTimeout)
                 msTimeout -=  msec(10);        
                 if(msTimeout <= 0)
                 {
+                    Sem_DebugInfo(semid, __FUNCTION__);
                     Sem_WrUnLock(semid);
                     return false;
                 }    
@@ -399,12 +409,14 @@ bool Sem_TimedWrLock(int semid, unsigned int u32msTimeout)
         }
         else
         {
+            Sem_DebugInfo(semid, __FUNCTION__);
             Sem_WrUnLock(semid);
             return false;
         }
     }
     else
     {
+        Sem_DebugInfo(semid, __FUNCTION__);
         return false;        
     }
     return true;     
@@ -465,6 +477,42 @@ static int RdLockCount(int semid)
     return semctl(semid,SEM_RDLOCK,GETVAL,arg);    
 }
 
+static void Sem_DebugInfo(int semid, const char *szFunName)
+{
+    struct semid_ds ds;
+    union semun arg, dummy;             /* Fourth argument for semctl() */
+    int j;
+
+    arg.buf = &ds;
+    if (semctl(semid, 0, IPC_STAT, arg) == -1)
+    {
+        syslog(LOG_WARNING ,"%s semctl failed\n", __FUNCTION__);
+        return;
+    }  
+    syslog(LOG_WARNING ,"semid:%d, FunName:%s, Sem changed:%x, Last semop():%x",semid, szFunName,(int) ds.sem_ctime,(int) ds.sem_otime);
+
+    /* Display per-semaphore information */
+
+    arg.array = alloca(ds.sem_nsems * sizeof(arg.array[0]));
+    if (arg.array == NULL)
+    {
+        syslog(LOG_WARNING ,"%s alloca failed\n", __FUNCTION__);
+        return;
+    }            
+    if (semctl(semid, 0, GETALL, arg) == -1)
+    {
+        syslog(LOG_WARNING ,"%s semctl GETALL failed\n", __FUNCTION__);
+        return;
+    } 
+    
+    for (j = 0; j < ds.sem_nsems; j++)
+        syslog(LOG_WARNING ,"Sem#:%d, Value:%d, SEMPID:%d, SEMNCNT:%d", 
+                j, 
+                arg.array[j],
+                semctl(semid, j, GETPID, dummy),
+                semctl(semid, j, GETNCNT, dummy));
+
+}
 void Sem_PrintInfo(int semid)
 {
     struct semid_ds ds;
