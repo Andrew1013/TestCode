@@ -18,7 +18,7 @@ int     Sem_RWLockInit(const char *pathname);
 /*pair for write lock and unlock for only one process to access.*/
 bool    Sem_TimedWrLock(int semid, unsigned int msTimeout);
 bool    Sem_WrUnLock(int semid);
-/*pair for read lock and unlock, these are 10 of the most process to access.*/
+/*pair for read lock and unlock, these are most 10 process to access.*/
 bool    Sem_TimedRdLock(int semid, unsigned int msTimeout);
 bool    Sem_RdUnLock(int semid);
 
