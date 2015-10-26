@@ -2,6 +2,9 @@
 #include <unistd.h>
 #include <stdio.h>
 
+volatile long long int count=0; 
+
+
 typedef struct _sAAASTR_Tag
 {
 	int a;
@@ -35,21 +38,19 @@ static void threadFunction3(void *arg)
 
 
 static void threadFunction4(void *arg) 
-{
-    int i = 0;
-    int iSec = 0;    
+{    
     int *retval = malloc(sizeof(int));
-    *retval = 1;
+    *retval = 99;
     
-    if(arg != NULL) 
-        iSec = *((int*)arg);       
+ 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL); 
+ 	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);     
 
 	Tx_TimerHandle *time3 = Tx_TimerCreate("Time4", sec(5), 0, true, timerFunction,  NULL);		
 	
-	for(i=0 ; i< iSec; i++)
-	{		
-		sleep(1);
-	}
+ 	while (1)
+ 	{ 
+ 	    count ++;
+ 	}
 	
 	Tx_TimerDelete(time3);     
 	pthread_exit((void *) retval );
@@ -78,9 +79,11 @@ int main()
     pthread_t a_thread;
     int iRet = 0;
     int isec = 0;
+    int i = 0;
    
     printf("------ Run Timer1 once ------ \n");
 	pTimeHandle = Tx_TimerCreate("Time1", sec(1), 0, false, threadFunction1, cstr1);
+    sleep(5);
 	Tx_TimerActivate(pTimeHandle);
     sleep(3);
     Tx_TimerDelete(pTimeHandle);  
@@ -102,9 +105,19 @@ int main()
     }    
    
     printf("------ Create one thread and Timer4 thread to monitor (with timeout) ------ \n");
-    isec = 10;
     pthread_create(&a_thread, NULL, (void *)&threadFunction4, (void*) &isec);
+	for (i=0; i<5; i++) 
+	{ 
+		sleep(1); 
+		printf("count=%lld\n", count); 
+	}         
     iRet = pthread_join(a_thread, &p_retval);    
+	for (i=0; i<5; i++) 
+	{ 
+		sleep(1); 
+		printf("count=%lld\n", count); 
+	} 
+
 
     if((intptr_t)  0xffffffffffffffff == (intptr_t)  p_retval)
     {
