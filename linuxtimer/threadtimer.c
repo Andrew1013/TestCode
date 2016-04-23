@@ -1,6 +1,7 @@
 #include "timerlib.h"
 #include <unistd.h>
 #include <stdio.h>
+#include <errno.h>
 
 volatile long long int count=0; 
 
@@ -14,12 +15,37 @@ typedef struct _sAAASTR_Tag
 
 static void timerFunction(union sigval sv) 
 { 
+    int res = -1;
+    int i = 0;
+        
     if(sv.sival_ptr != NULL)
     {
         Tx_TimerHandle *pTimehandle = (Tx_TimerHandle *)(sv.sival_ptr);
         pthread_t	tpid = pTimehandle->tpid; 
-        Tx_TimerDelete(pTimehandle);	
-        pthread_cancel(tpid);
+        Tx_TimerDelete(pTimehandle);
+
+        for(i = 0; i < 5; i++)
+        {
+            if((res = pthread_cancel(tpid)) == 0)
+            {
+                printf("Send pthread_cancel success\n");
+            }
+            sleep(1);
+            if((res = pthread_cancel(tpid)) == 0)
+            {
+                printf("Send pthread_cancel success\n");
+            }
+            else
+            {                
+                if(res == ESRCH)
+                {                    
+                    printf("The pthread does not exist.\n");                    
+                    return;
+                }    
+            }   
+       }   
+       printf("The pthread cancel failed...\n");    
+       _exit(-1); 
     }
 }
 

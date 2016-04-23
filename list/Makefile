@@ -7,7 +7,9 @@ OBJECTS = test_list.o
 
 #${OBJECTS}: ${SOURCES}
 
-all : test1
+all : build
+
+build: test1
 
 test1 : ${OBJECTS} 
 	${CC} ${CFLAGS} -o $@ ${OBJECTS} ${LIBS}
